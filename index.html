@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Parcel Tracker</title>
+  <meta name="theme-color" content="#253444" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Parcel" />
+  <link rel="apple-touch-icon" href="icon-180.png" />
+  <link rel="manifest" href="manifest.json" />
   <style>
     :root {
       --dark: #253444;
@@ -87,6 +94,27 @@
       background: var(--con-bg); color: var(--con-fg); border: 1px solid #111316;
       padding: 8px 10px; font-family: Consolas, "Courier New", monospace;
       font-size: 12.5px; line-height: 1.4; overflow: auto; white-space: pre;
+    }
+    /* ---------- Phone layout ---------- */
+    @media (max-width: 640px) {
+      .header { height: 58px; padding: 0 16px; }
+      .header-title { font-size: 22px; }
+      .header-sub { font-size: 13px; }
+      .body { padding: 14px 14px max(16px, env(safe-area-inset-bottom)); }
+
+      label { font-size: 15px; margin-bottom: 7px; }
+      textarea#txtNum { height: 120px; font-size: 16px; padding: 10px; }
+
+      .controls { gap: 10px; }
+      .controls #txtPhone { flex: 1 1 100%; }      /* phone on its own row */
+      input[type="text"] { height: 50px; font-size: 16px; padding: 6px 12px; }
+
+      button { height: 50px; font-size: 16px; padding: 0 16px;
+               flex: 1 1 calc(50% - 5px); justify-content: center; }  /* 2 per row */
+
+      .tab { height: 44px; font-size: 16px; padding: 0 22px; }
+      #summary th, #summary td { padding: 10px; font-size: 15px; }
+      pre#out { font-size: 14px; line-height: 1.55; padding: 10px 12px; }
     }
   </style>
 </head>
