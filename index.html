@@ -300,8 +300,17 @@
       return decodeHtmlEntities(m[1].replace(/<[^>]+>/g, " ")).replace(/\s{2,}/g, " ").trim();
     }
     async function trackGcx(num) {
-      const resp = await fetch(GCX_BASE + encodeURIComponent(num));
-      const html = await resp.text();
+      let resp, html;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 30000);
+      try {
+        resp = await fetch(GCX_BASE + encodeURIComponent(num), { signal: ctrl.signal });
+        html = await resp.text();
+      } catch (e) {
+        return { Found: false, Message: e && e.name === "AbortError" ? "timeout (30s) — proxy/GCX not responding" : (e && e.message ? e.message : "fetch failed") };
+      } finally {
+        clearTimeout(timer);
+      }
       if (!resp.ok) return { Found: false, Message: "HTTP " + resp.status + (html ? ": " + html.slice(0, 120) : "") };
       const curEng = gcxSpan(html, "LbCurrentStatusEng");
       const idx = [...new Set([...html.matchAll(/id="lbEventDescrEng(\d+)"/g)].map((m) => +m[1]))].sort((a, b) => a - b);
