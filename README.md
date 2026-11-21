@@ -8,7 +8,7 @@ routes carrier requests through a small Cloudflare Worker (to get around CORS).
 
 ## Features
 
-- **Paste a list or any text** — every `ED…`, `AE…`, `SN…`, `RS…` (and `…IL`)
+- **Paste a list or any text** — every `ED…`, `AE…`, `SN…`, `XLT…`, `RS…` (and `…IL`)
   tracking number is auto‑extracted with a regex and de‑duplicated.
 - **Batch tracking** — tracks the whole list in one click.
 - **Auto carrier detection** from the number prefix (see table below).
@@ -24,7 +24,8 @@ routes carrier requests through a small Cloudflare Worker (to get around CORS).
 | `ED…`  | HFD | yes | RunCom 2‑step (XML token → HTML timeline) |
 | `AE…`  | Chita (ציטה) | yes | RunCom 2‑step, self‑hosted |
 | `SN…`  | GCX | no | ASP.NET postback (GET tokens → POST); hands off to YDM |
-| `RS…` / `…IL` / other S10 | Israel Post | no | MyPost JSON API |
+| `XLT…` | Exelot | no | Direct JSON API (`apiv2p.exelot.com`) |
+| `RS…` / `…IL` / other S10 | Israel Post | no | MyPost JSON API 
 
 Detection order: `ED` → HFD, `AE` → Chita, `SN` → GCX, anything else shaped
 like `2 letters + digits (+trailing letters)` → Israel Post. `ED`, `AE` and
