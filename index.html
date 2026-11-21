@@ -122,14 +122,14 @@
   <div class="window">
     <div class="header">
       <div class="header-title">Parcel Tracker</div>
-      <div class="header-sub">HFD &nbsp;/&nbsp; Israel Post &nbsp;/&nbsp; Cheetah &nbsp;/&nbsp; GCX</div>
+      <div class="header-sub">HFD &nbsp;/&nbsp; Israel Post &nbsp;/&nbsp; Cheetah &nbsp;/&nbsp; GCX &nbsp;/&nbsp; Exelot</div>
     </div>
     <div class="accent-bar"></div>
 
     <div class="body">
       <form id="trackForm">
-        <label for="txtNum">Tracking numbers &mdash; paste a list or any text (ED&hellip; / AE&hellip; / SN&hellip; / RS&hellip; auto-extracted)</label>
-        <textarea id="txtNum" autocomplete="off" placeholder="ED004795367&#10;RS1352727496Y&#10;AE041971705&#10;SN8094856"></textarea>
+        <label for="txtNum">Tracking numbers &mdash; paste a list or any text (ED&hellip; / AE&hellip; / SN&hellip; / XLT&hellip; / RS&hellip; auto-extracted)</label>
+        <textarea id="txtNum" autocomplete="off" placeholder="ED004795367&#10;RS1352727496Y&#10;AE041971705&#10;SN8094856&#10;XLT988741138"></textarea>
         <div class="controls">
           <input id="txtPhone" type="text" autocomplete="off" placeholder="Phone (HFD / Cheetah)" />
           <button id="btnTrack" type="submit">Track all</button>
@@ -164,8 +164,8 @@
 
     const IPOST_KEY = "5ccb5b137e7444d885be752eda7f767a";
 
-    // Pulls every ED.., AE.., RS..Y (and S10-style) token out of arbitrary text.
-    const TRACK_RX = /\b(?:ED\d{5,}|AE\d{5,}|SN\d{5,}|RS\d{5,}[A-Z]{0,2}|[A-Z]{2}\d{6,}[A-Z]{1,2})\b/gi;
+    // Pulls every ED.., AE.., SN.., XLT.., RS..Y (and S10-style) token out of arbitrary text.
+    const TRACK_RX = /\b(?:ED\d{5,}|AE\d{5,}|SN\d{5,}|XLT\d{5,}|RS\d{5,}[A-Z]{0,2}|[A-Z]{2}\d{6,}[A-Z]{1,2})\b/gi;
 
     const form = document.getElementById("trackForm");
     const txtNum = document.getElementById("txtNum");
@@ -198,6 +198,7 @@
       if (n.startsWith("ED")) return "HFD";
       if (n.startsWith("AE")) return "Chita";
       if (n.startsWith("SN")) return "GCX";
+      if (n.startsWith("XLT")) return "Exelot";
       if (n.startsWith("RS")) return "Post";
       if (/^[A-Z]{2}\d{6,}[A-Z]{0,2}$/.test(n)) return "Post";
       return null;
@@ -254,7 +255,9 @@
         throw new Error(`HTTP ${resp.status} ${resp.statusText}: ${t}`);
       }
       let s = new TextDecoder("utf-8", { fatal: false }).decode(buf);
-      if (s.includes("�")) s = new TextDecoder("windows-1255").decode(buf);
+      if (s.includes("\uFFFD") || (s.match(/[×׳]/g) || []).length >= 3) {
+        s = new TextDecoder("windows-1255").decode(buf);
+      }
       return s;
     }
 
@@ -359,6 +362,25 @@
       return { Found: bestRef.current.length > 0, Events: bestRef.current, Raw: rawJson };
     }
 
+    async function trackExelot(num) {
+      const url = `https://apiv2p.exelot.com/api/v2/parcels/tracking/details/${encodeURIComponent(num)}`;
+      const resp = await fetch(url, { headers: { "Accept": "application/json, text/plain, */*" } });
+      const rawJson = await resp.text();
+      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}: ${rawJson.slice(0, 160)}`);
+      if (!rawJson || !rawJson.trim()) return { Found: false, Message: "empty response" };
+      let data;
+      try { data = JSON.parse(rawJson); } catch { return { Found: false, Message: "invalid JSON" }; }
+      const parcel = Array.isArray(data) ? data[0] : data;
+      const history = parcel && Array.isArray(parcel.statusHistory) ? parcel.statusHistory : [];
+      if (!parcel || !history.length) return { Found: false, Message: "not found / no data" };
+      return {
+        Found: true,
+        Status: parcel.parcelStatus || "",
+        Return: Boolean(parcel.isReturn),
+        Events: history
+      };
+    }
+
     function addRow(idx, num, carrier) {
       const tr = document.createElement("tr");
       const tdIdx = document.createElement("td"); tdIdx.textContent = idx;
@@ -394,7 +416,7 @@
       const phone = normalizePhone(txtPhone.value);
       clearResults();
 
-      if (!nums.length) { writeOut("No tracking numbers found (expected ED…, AE…, SN…, RS…Y)."); return; }
+      if (!nums.length) { writeOut("No tracking numbers found (expected ED…, AE…, SN…, XLT…, RS…Y)."); return; }
 
       const needPhone = nums.some((n) => { const c = detectCarrier(n); return c === "HFD" || c === "Chita"; });
       if (needPhone && !phone) { writeOut("A phone number is required for HFD / Cheetah numbers."); return; }
@@ -440,6 +462,21 @@
             } else {
               setCell(cell, res.Message || "Not found", false); bad++;
               writeOut(`GCX - ${num}: ${res.Message || "not found"}`); blockDivider();
+            }
+          } else if (carrier === "Exelot") {
+            const res = await trackExelot(num);
+            if (res.Found) {
+              const latestText = res.Events[0].statusText || res.Status || "Found";
+              const summaryText = res.Status ? `${res.Status} — ${latestText}` : latestText;
+              setCell(cell, summaryText, true); ok++;
+              writeOut(`Exelot - ${num}    Status: ${res.Status || "-"} | Return: ${res.Return}`);
+              for (const e of res.Events) {
+                writeOut(`    ${e.date || ""}  |  ${e.statusLocations || ""}  |  [${e.statusCode || ""}]  ${e.statusText || ""}`);
+              }
+              blockDivider();
+            } else {
+              setCell(cell, res.Message || "Not found", false); bad++;
+              writeOut(`Exelot - ${num}: ${res.Message || "not found"}`); blockDivider();
             }
           } else {
             const res = carrier === "Chita" ? await trackChita(num, phone) : await trackHfd(num, phone);
