@@ -27,9 +27,9 @@ routes carrier requests through a small Cloudflare Worker (to get around CORS).
 | `XLT…` | Exelot | no | Direct JSON API (`apiv2p.exelot.com`) |
 | `RS…` / `…IL` / other S10 | Israel Post | no | MyPost JSON API 
 
-Detection order: `ED` → HFD, `AE` → Chita, `SN` → GCX, anything else shaped
-like `2 letters + digits (+trailing letters)` → Israel Post. `ED`, `AE` and
-`SN` are pinned (proprietary, non‑postal formats); every postal prefix is
+Detection order: `ED` → HFD, `AE` → Chita, `SN` → GCX, `XLT` → Exelot, anything else shaped
+like `2 letters + digits (+trailing letters)` → Israel Post. `ED`, `AE`, `SN` and
+`XLT` are pinned (proprietary, non‑postal formats); every postal prefix is
 caught generically, so new `R…`/`C…`/`E…` variants route to Israel Post
 automatically.
 
